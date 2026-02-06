@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tetris Tango - Ivo Ambrosi</title>
+<meta property="og:title" content="Tetris Tango">
+<meta property="og:description" content="Riempi la pista da ballo con la musica di Ivo Ambrosi!">
+<meta property="og:image" content="https://files.catbox.moe/d1hnx9.png">
+
+<style>
+    * { touch-action: manipulation; box-sizing: border-box; }
+    body {
+        margin: 0; height: 100vh; display: flex; flex-direction: column;
+        align-items: center; background: #1a0f0a; color: #d7ccc8;
+        font-family: 'Georgia', serif; overflow: hidden;
+    }
+    #game-container {
+        position: relative; border: 6px solid #5d4037; margin-top: 5px;
+        width: 95vw; max-width: 360px; height: 90vh;
+        box-shadow: 0 0 50px rgba(0,0,0,0.9);
+    }
+    #title-bar {
+        background: #5d4037; color: #e0c097; text-align: center;
+        padding: 4px 0; font-weight: bold; font-size: 14px;
+        letter-spacing: 3px; text-transform: uppercase;
+    }
+    canvas {
+        display: block; width: 100%; height: calc(100% - 22px);
+        background-color: #3e2723;
+        background-image: 
+            linear-gradient(90deg, transparent 95%, rgba(0,0,0,0.5) 100%),
+            repeating-linear-gradient(90deg, #3e2723, #3e2723 38px, #2b1d12 40px);
+        background-size: 40px 100%;
+    }
+    #mobile-controls {
+        position: absolute; bottom: 8px; left: 0; width: 100%;
+        pointer-events: none; display: flex; flex-direction: column;
+        gap: 4px; padding: 0 8px; z-index: 5;
+    }
+    .btn-row { display: flex; gap: 4px; justify-content: center; pointer-events: auto; }
+    .btn {
+        background: rgba(93, 64, 55, 0.7); color: #fff;
+        border: 1px solid rgba(255,255,255,0.2); padding: 12px 0;
+        border-radius: 4px; font-size: 14px; font-weight: bold; flex: 1;
+    }
+    #start-menu, #end-menu, #story-page {
+        position: absolute; inset: 0; background: rgba(26, 15, 10, 0.98); 
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; z-index: 20; border: 2px solid #e0c097; text-align: center;
+        padding: 20px;
+    }
+    .yt-link {
+        display: block; color: #e0c097; text-decoration: none; font-weight: bold;
+        font-size: 16px; margin-bottom: 5px; text-transform: uppercase;
+        border: 2px solid #e0c097; padding: 8px; border-radius: 5px;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); } 50% { transform: scale(1.05); box-shadow: 0 0 10px #e0c097; } 100% { transform: scale(1); }
+    }
+    .story-btn {
+        background: transparent !important; color: #e0c097 !important;
+        border: 1px solid #e0c097 !important; font-size: 12px !important; margin-top: 8px !important;
+    }
+    .story-content { font-style: italic; line-height: 1.6; color: #d7ccc8; font-size: 15px; margin-bottom: 20px; white-space: pre-line; }
+    .action-btn { padding: 12px 25px; font-size: 16px; background: #e0c097; color: #1a0f0a; border: none; font-weight: bold; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="title-bar">TETRIS TANGO</div>
+    
+    <div id="start-menu">
+        <h1>TETRIS TANGO</h1>
+        <button class="action-btn" id="start-btn">ENTER THE MILONGA</button>
+    </div>
+
+    <div id="end-menu" style="display:none;">
+        <h1>DANCEFLOOR FULL</h1>
+        <p style="color:#e0c097">Couples: <span id="final-score">0</span> / 170</p>
+        <span style="font-size: 18px">⬇</span>
+        <a href="https://www.youtube.com/@IvoAmbrosiTANGO" target="_blank" class="yt-link">CLICK HERE FOR YOUTUBE CHANNEL</a>
+        <span style="font-weight:bold">by IVO AMBROSI</span>
+        <img src="https://files.catbox.moe/d1hnx9.png" style="width:70%; margin:10px 0; border-radius:8px;">
+        <button class="action-btn" id="play-again-btn">DANCE AGAIN</button>
+        <button class="action-btn story-btn" id="open-story-btn">READ THE STORY</button>
+    </div>
+
+    <div id="story-page" style="display:none;">
+        <div class="story-content">
+            That night at the milonga
+            we moved so close,
+            the space between us
+            vanished like mist.
+            Our bodies spoke in whispers
+            and sighs,
+            so dense it was hard to tell
+            where our couple ended
+            and another began.
+
+            Feet traced secrets
+            across the wooden floor,
+            hearts beating in a shared,
+            silent rhythm.
+            The room dissolved around us,
+            and only our tango remained.
+        </div>
+        <button class="action-btn" id="story-dance-btn">DANCE AGAIN</button>
+    </div>
+
+    <canvas id="game" width="400" height="800"></canvas>
+    
+    <div id="mobile-controls">
+        <div class="btn-row">
+            <button class="btn" id="btn-left">←</button>
+            <button class="btn" id="btn-rot">ROTATE</button>
+            <button class="btn" id="btn-right">→</button>
+        </div>
+        <div class="btn-row">
+            <button class="btn" id="btn-down">SOFT ↓</button>
+            <button class="btn" id="btn-drop">HARD ⤓</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- LOGICA AUDIO (Vol x2, Speed 110%) ---
+class TangoSynth {
+    constructor() { this.ctx = null; }
+    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    playNote(freq, start, dur) {
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, this.ctx.currentTime + start);
+        gain.gain.setValueAtTime(0, this.ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.35, this.ctx.currentTime + start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + start + dur);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(this.ctx.currentTime + start); osc.stop(this.ctx.currentTime + start + dur);
+    }
+}
+const synth = new TangoSynth();
+let musicTimeout, running = false;
+const recording = [{f:311.13,s:1080,e:1368},{f:466.16,s:1605,e:1837},{f:392,s:2106,e:2327},{f:311.13,s:2636,e:3119},{f:329.63,s:3432,e:3698},{f:349.23,s:3757,e:4039},{f:329.63,s:4017,e:4484},{f:311.13,s:4422,e:5085},{f:329.63,s:5042,e:5784}];
+
+function playLoop() {
+    if(!running) return;
+    const base = recording[0].s, scale = 0.909;
+    recording.forEach(n => synth.playNote(n.f, ((n.s-base)*scale)/1000, ((n.e-n.s)*scale)/1000));
+    musicTimeout = setTimeout(playLoop, ((recording[8].e-base)*scale) + 400);
+}
+
+// --- LOGICA GIOCO ---
+const imgs = ["mj7ak4.png","tl8ltb.png","mwkoog.png"].map(n => {
+    const i = new Image(); i.crossOrigin="anonymous"; i.src="https://files.catbox.moe/"+n; return i;
+});
+const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+const SHAPES = [[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],[[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],[[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],[[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],[[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],[[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],[[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]]];
+let board, boardData, current, nextT, score, lastT;
+
+function rotate(m) {
+    let r = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    for(let y=0;y<4;y++) for(let x=0;x<4;x++) r[x][3-y]=m[y][x]; return r;
+}
+function getS(t,r) { let s=SHAPES[t]; for(let i=0;i<r;i++) s=rotate(s); return s; }
+function coll(t,r,x,y) {
+    const m = getS(t,r);
+    for(let j=0;j<4;j++) for(let i=0;i<4;i++) if(m[j][i]) {
+        let nx=x+i, ny=y+j; if(nx<0||nx>=10||ny>=17) return true;
+        if(ny>=0 && board[ny][nx]) return true;
+    } return false;
+}
+function newP() {
+    current = {x:3,y:0,t:nextT,r:0,d:Array.from({length:4},()=>Array.from({length:4},()=>({img:imgs[Math.floor(Math.random()*3)],m:Math.random()<0.5?-1:1,v:Math.random()<0.5?1:-1})))};
+    nextT = Math.floor(Math.random()*7); if(coll(current.t,0,3,0)) { running=false; document.getElementById('final-score').textContent=score; document.getElementById('end-menu').style.display="flex"; }
+}
+function startGame() {
+    board=Array.from({length:20},()=>Array(10).fill(0)); boardData=Array.from({length:20},()=>Array(10).fill(null));
+    score=0; running=true; nextT=Math.floor(Math.random()*7); newP();
+    document.getElementById('start-menu').style.display="none"; document.getElementById('end-menu').style.display="none"; document.getElementById('story-page').style.display="none";
+    clearTimeout(musicTimeout); playLoop(); requestAnimationFrame(loop);
+}
+function loop(ts) {
+    if(!running) return;
+    if(!lastT) lastT=ts; if(ts-lastT>800){ lastT=ts; if(!coll(current.t,current.r,current.x,current.y+1)) current.y++; else {
+        const m=getS(current.t,current.r);
+        for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(m[y][x]&&current.y+y>=0){ board[current.y+y][current.x+x]=1; boardData[current.y+y][current.x+x]={...current.d[y][x], o:Math.random()*6}; score++; }
+        newP();
+    }}
+    ctx.clearRect(0,0,400,800); const now=performance.now();
+    for(let y=0;y<20;y++) for(let x=0;x<10;x++) if(boardData[y][x]){
+        let d=boardData[y][x]; ctx.save(); ctx.translate(x*40+20,y*40+20); ctx.scale(d.m,1); ctx.rotate(d.o+now*0.0002*d.v); ctx.drawImage(d.img,-22,-22,44,44); ctx.restore();
+    }
+    const m=getS(current.t,current.r);
+    for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(m[y][x]){
+        let d=current.d[y][x]; ctx.save(); ctx.translate((current.x+x)*40+20,(current.y+y)*40+20); ctx.rotate(now*0.0002*d.v); ctx.drawImage(d.img,-22,-22,44,44); ctx.restore();
+    }
+    requestAnimationFrame(loop);
+}
+// Controlli
+document.getElementById('start-btn').onclick = startGame;
+document.getElementById('play-again-btn').onclick = startGame;
+document.getElementById('story-dance-btn').onclick = startGame;
+document.getElementById('open-story-btn').onclick = () => { document.getElementById('end-menu').style.display="none"; document.getElementById('story-page').style.display="flex"; };
+const t = (id, f) => document.getElementById(id).ontouchstart = (e) => { e.preventDefault(); f(); };
+t('btn-left', () => { if(!coll(current.t,current.r,current.x-1,current.y)) current.x--; });
+t('btn-right', () => { if(!collides(current.t,current.r,current.x+1,current.y)) current.x++; });
+t('btn-rot', () => { let nr=(current.r+1)%4; if(!coll(current.t,nr,current.x,current.y)) { current.r=nr; current.d=rotate(current.d); } });
+t('btn-down', () => { if(!coll(current.t,current.r,current.x,current.y+1)) current.y++; });
+t('btn-drop', () => { while(!coll(current.t,current.r,current.x,current.y+1)) current.y++; });
+</script>
+</body>
+</html>
