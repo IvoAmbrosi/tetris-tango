@@ -63,7 +63,7 @@
         background: transparent !important; color: #e0c097 !important;
         border: 1px solid #e0c097 !important; font-size: 12px !important; margin-top: 8px !important;
     }
-    .story-content { font-style: italic; line-height: 1.6; color: #d7ccc8; font-size: 15px; margin-bottom: 20px; white-space: pre-line; }
+    .story-content { font-style: italic; line-height: 1.6; color: #d7ccc8; font-size: 15px; margin-bottom: 20px; white-space: pre-line; text-align: center; }
     .action-btn { padding: 12px 25px; font-size: 16px; background: #e0c097; color: #1a0f0a; border: none; font-weight: bold; cursor: pointer; }
 </style>
 </head>
@@ -126,7 +126,6 @@
 </div>
 
 <script>
-// --- LOGICA AUDIO (Vol x2, Speed 110%) ---
 class TangoSynth {
     constructor() { this.ctx = null; }
     init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -153,7 +152,6 @@ function playLoop() {
     musicTimeout = setTimeout(playLoop, ((recording[8].e-base)*scale) + 400);
 }
 
-// --- LOGICA GIOCO ---
 const imgs = ["mj7ak4.png","tl8ltb.png","mwkoog.png"].map(n => {
     const i = new Image(); i.crossOrigin="anonymous"; i.src="https://files.catbox.moe/"+n; return i;
 });
@@ -161,56 +159,93 @@ const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
 const SHAPES = [[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],[[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],[[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],[[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],[[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],[[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],[[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]]];
 let board, boardData, current, nextT, score, lastT;
 
-function rotate(m) {
+function rotateMatrix(m) {
     let r = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
     for(let y=0;y<4;y++) for(let x=0;x<4;x++) r[x][3-y]=m[y][x]; return r;
 }
-function getS(t,r) { let s=SHAPES[t]; for(let i=0;i<r;i++) s=rotate(s); return s; }
-function coll(t,r,x,y) {
+function getS(t,r) { let s=SHAPES[t]; for(let i=0;i<r;i++) s=rotateMatrix(s); return s; }
+
+function collides(t,r,x,y) {
     const m = getS(t,r);
     for(let j=0;j<4;j++) for(let i=0;i<4;i++) if(m[j][i]) {
         let nx=x+i, ny=y+j; if(nx<0||nx>=10||ny>=17) return true;
         if(ny>=0 && board[ny][nx]) return true;
     } return false;
 }
+
 function newP() {
     current = {x:3,y:0,t:nextT,r:0,d:Array.from({length:4},()=>Array.from({length:4},()=>({img:imgs[Math.floor(Math.random()*3)],m:Math.random()<0.5?-1:1,v:Math.random()<0.5?1:-1})))};
-    nextT = Math.floor(Math.random()*7); if(coll(current.t,0,3,0)) { running=false; document.getElementById('final-score').textContent=score; document.getElementById('end-menu').style.display="flex"; }
+    nextT = Math.floor(Math.random()*7); 
+    if(collides(current.t,0,3,0)) { 
+        running=false; 
+        document.getElementById('final-score').textContent=score; 
+        document.getElementById('end-menu').style.display="flex"; 
+    }
 }
+
 function startGame() {
-    board=Array.from({length:20},()=>Array(10).fill(0)); boardData=Array.from({length:20},()=>Array(10).fill(null));
+    board=Array.from({length:20},()=>Array(10).fill(0)); 
+    boardData=Array.from({length:20},()=>Array(10).fill(null));
     score=0; running=true; nextT=Math.floor(Math.random()*7); newP();
-    document.getElementById('start-menu').style.display="none"; document.getElementById('end-menu').style.display="none"; document.getElementById('story-page').style.display="none";
+    document.getElementById('start-menu').style.display="none"; 
+    document.getElementById('end-menu').style.display="none"; 
+    document.getElementById('story-page').style.display="none";
     clearTimeout(musicTimeout); playLoop(); requestAnimationFrame(loop);
 }
+
 function loop(ts) {
     if(!running) return;
-    if(!lastT) lastT=ts; if(ts-lastT>800){ lastT=ts; if(!coll(current.t,current.r,current.x,current.y+1)) current.y++; else {
-        const m=getS(current.t,current.r);
-        for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(m[y][x]&&current.y+y>=0){ board[current.y+y][current.x+x]=1; boardData[current.y+y][current.x+x]={...current.d[y][x], o:Math.random()*6}; score++; }
-        newP();
-    }}
+    if(!lastT) lastT=ts; 
+    if(ts-lastT>800){ 
+        lastT=ts; 
+        if(!collides(current.t,current.r,current.x,current.y+1)) current.y++; 
+        else {
+            const m=getS(current.t,current.r);
+            for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(m[y][x]&&current.y+y>=0){ 
+                board[current.y+y][current.x+x]=1; 
+                boardData[current.y+y][current.x+x]={...current.d[y][x], o:Math.random()*6}; 
+                score++; 
+            }
+            newP();
+        }
+    }
     ctx.clearRect(0,0,400,800); const now=performance.now();
     for(let y=0;y<20;y++) for(let x=0;x<10;x++) if(boardData[y][x]){
         let d=boardData[y][x]; ctx.save(); ctx.translate(x*40+20,y*40+20); ctx.scale(d.m,1); ctx.rotate(d.o+now*0.0002*d.v); ctx.drawImage(d.img,-22,-22,44,44); ctx.restore();
     }
-    const m=getS(current.t,current.r);
-    for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(m[y][x]){
-        let d=current.d[y][x]; ctx.save(); ctx.translate((current.x+x)*40+20,(current.y+y)*40+20); ctx.rotate(now*0.0002*d.v); ctx.drawImage(d.img,-22,-22,44,44); ctx.restore();
+    if(current){
+        const m=getS(current.t,current.r);
+        for(let y=0;y<4;y++) for(let x=0;x<4;x++) if(m[y][x]){
+            let d=current.d[y][x]; ctx.save(); ctx.translate((current.x+x)*40+20,(current.y+y)*40+20); ctx.rotate(now*0.0002*d.v); ctx.drawImage(d.img,-22,-22,44,44); ctx.restore();
+        }
     }
     requestAnimationFrame(loop);
 }
-// Controlli
+
+// Controlli Tastiera
+document.addEventListener('keydown', e => {
+    if(!running) return;
+    if(e.code === "ArrowLeft" && !collides(current.t,current.r,current.x-1,current.y)) current.x--;
+    if(e.code === "ArrowRight" && !collides(current.t,current.r,current.x+1,current.y)) current.x++;
+    if(e.code === "ArrowDown" && !collides(current.t,current.r,current.x,current.y+1)) current.y++;
+    if(e.code === "ArrowUp") { let nr=(current.r+1)%4; if(!collides(current.t,nr,current.x,current.y)) { current.r=nr; current.d=rotateMatrix(current.d); } }
+});
+
+// Controlli UI
 document.getElementById('start-btn').onclick = startGame;
 document.getElementById('play-again-btn').onclick = startGame;
 document.getElementById('story-dance-btn').onclick = startGame;
 document.getElementById('open-story-btn').onclick = () => { document.getElementById('end-menu').style.display="none"; document.getElementById('story-page').style.display="flex"; };
-const t = (id, f) => document.getElementById(id).ontouchstart = (e) => { e.preventDefault(); f(); };
-t('btn-left', () => { if(!coll(current.t,current.r,current.x-1,current.y)) current.x--; });
+
+const t = (id, f) => {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); f(); }, {passive: false});
+};
+t('btn-left', () => { if(!collides(current.t,current.r,current.x-1,current.y)) current.x--; });
 t('btn-right', () => { if(!collides(current.t,current.r,current.x+1,current.y)) current.x++; });
-t('btn-rot', () => { let nr=(current.r+1)%4; if(!coll(current.t,nr,current.x,current.y)) { current.r=nr; current.d=rotate(current.d); } });
-t('btn-down', () => { if(!coll(current.t,current.r,current.x,current.y+1)) current.y++; });
-t('btn-drop', () => { while(!coll(current.t,current.r,current.x,current.y+1)) current.y++; });
+t('btn-rot', () => { let nr=(current.r+1)%4; if(!collides(current.t,nr,current.x,current.y)) { current.r=nr; current.d=rotateMatrix(current.d); } });
+t('btn-down', () => { if(!collides(current.t,current.r,current.x,current.y+1)) current.y++; });
+t('btn-drop', () => { while(!collides(current.t,current.r,current.x,current.y+1)) current.y++; });
 </script>
 </body>
 </html>
